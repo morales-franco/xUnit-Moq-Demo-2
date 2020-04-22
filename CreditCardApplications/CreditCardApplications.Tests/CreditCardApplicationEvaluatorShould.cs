@@ -31,10 +31,23 @@ namespace CreditCardApplications.Tests
         public void ReferYoungApplications()
         {
             //Arrange
-            Mock<IFrequentFlyerNumberValidator> mockValidator = 
+            Mock<IFrequentFlyerNumberValidator> mockValidator =
                 new Mock<IFrequentFlyerNumberValidator>();
 
             mockValidator.Setup(x => x.IsValid(It.IsAny<string>())).Returns(true);
+            /*
+             * TODO: Specifyng DefaultValue strategy
+             * With this approach, we write a explicit value for LicenseKey property
+             * mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns(GetLicenseKeyExpiryString);
+             * 
+             * With the following approach, we delegate to Moq the default value.
+             * In this case: x.ServiceInformation.License.LicenseKey = null porque LicenseKey is STRING.
+             * Si fuea una clase/interface seria mockeada.
+             * 
+             * Si o si tenemos que usar uno de los dos approachs porque sino vamos a tener un NULL-REFERENCE-EXCEPTION
+             */
+
+            mockValidator.DefaultValue = DefaultValue.Mock;
 
             var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
             var application = new CreditCardApplication { Age = 19 };
@@ -52,6 +65,7 @@ namespace CreditCardApplications.Tests
             //Arrange
             Mock<IFrequentFlyerNumberValidator> mockValidator =
                 new Mock<IFrequentFlyerNumberValidator>();
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey); //RETURN NULL
 
             /*
              * TODO: Mock result Method - setup the mockValidator for the IsValid Method return true!
@@ -83,6 +97,7 @@ namespace CreditCardApplications.Tests
             //Arrange
             Mock<IFrequentFlyerNumberValidator> mockValidator =
                 new Mock<IFrequentFlyerNumberValidator>();
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
 
             //TODO: Use It class to avoid hardcoding parameters. In this case we says: if you receive any string, return TRUE.
             mockValidator.Setup(x => x.IsValid(It.IsAny<string>())).Returns(true);
@@ -133,8 +148,10 @@ namespace CreditCardApplications.Tests
             //Arrange
             Mock<IFrequentFlyerNumberValidator> mockValidator =
                 new Mock<IFrequentFlyerNumberValidator>(MockBehavior.Strict);
-
+            
+            //EXPLICIT Mocking
             mockValidator.Setup(x => x.IsValid(It.IsAny<string>())).Returns(false);
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns(GetLicenseKeyExpiryString);
 
             var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
 
@@ -174,6 +191,79 @@ namespace CreditCardApplications.Tests
 
             //assert
             Assert.Equal(CreditCardApplicationDecision.AutoDeclined, decision);
+        }
+
+        [Fact]
+        public void ReferWhenLicenseKeyExpired()
+        {
+            //arrange
+            var mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+
+            mockValidator.Setup(x => x.IsValid(It.IsAny<string>())).Returns(true);
+
+            //TODO: Hierarchies properties - manual way
+            //var mockLicenseData = new Mock<ILicenseData>();
+            //mockLicenseData.Setup(x => x.LicenseKey).Returns("EXPIRED");
+
+            //var mockServiceInfo = new Mock<IServiceInformation>();
+            //mockServiceInfo.Setup(x => x.License).Returns(mockLicenseData.Object);
+
+            //mockValidator.Setup(x => x.ServiceInformation).Returns(mockServiceInfo.Object);
+
+            //TODO: Property return a specified value
+            //mockValidator.Setup(x => x.LicenseKey)
+            //             .Returns("EXPIRED");
+
+            //TODO: Hierarchies properties - automatically approach Level1.Level2.Property
+            //TODO: Property return a specified value from function
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey)
+                         .Returns(GetLicenseKeyExpiryString);
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { Age = 42 };
+
+            //act
+            CreditCardApplicationDecision decision = sut.Evaluate(application);
+
+            //assert
+            Assert.Equal(CreditCardApplicationDecision.ReferredToHuman, decision);
+        }
+
+        string GetLicenseKeyExpiryString()
+        {
+            // E.g. read from vendor-supplied constants file
+            return "EXPIRED";
+        }
+
+        [Fact]
+        public void UseDetailedLookupForOlderApplications()
+        {
+            /*
+             * By default MOCK properties DO NOT remember changes doing in the test process.
+             * Ex: IFrequentFlyerNumberValidator has a enum properties, it is modified in the Evaluate Method
+             * however when return from the method, the enum property do not keep the changed value.
+             * This is de default behaviour but if we want to keep the changes to TRACKING DATA
+             * we can two options:
+             */
+
+            var mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+
+            //TODO: Tracking changes to mock properties values - track all properties
+            //SetupAllProperties - order is important, must be before Setup
+            mockValidator.SetupAllProperties();
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
+            //TODO: Tracking changes to mock properties values - track a specified property
+            ///mockValidator.SetupProperty(x => x.ValidationMode);
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { Age = 30 };
+
+            CreditCardApplicationDecision decision = sut.Evaluate(application);
+
+            //check value property - tracking changes of ValidationMode property 
+            Assert.Equal(ValidationMode.Detailed, mockValidator.Object.ValidationMode);
         }
 
 
