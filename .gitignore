@@ -5,3 +5,6 @@
 /CreditCardApplications/.vs/CreditCardApplications/v16
 /CreditCardApplications/CreditCardApplications/obj
 /moq-dot-net-core-unit-tests
+/CreditCardApplications/CreditCardApplications/bin/Debug/netcoreapp3.1
+/CreditCardApplications/CreditCardApplications.Tests/bin/Debug/netcoreapp3.1
+/CreditCardApplications/CreditCardApplications.Tests/obj
