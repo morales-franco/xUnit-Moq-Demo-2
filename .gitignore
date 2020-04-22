@@ -3,3 +3,5 @@
 ################################################################################
 
 /CreditCardApplications/.vs/CreditCardApplications/v16
+/CreditCardApplications/CreditCardApplications/obj
+/moq-dot-net-core-unit-tests
