@@ -59,3 +59,33 @@ or
 
 mockValidator.SetupProperty(x => x.PropertyToTrack);
 ```
+
+### Behaviour verification tests
+1. Behaviour Testing  & State Based Testing
+
+2. Behaviour Testing  - Checking if a method was called with a specified or any parameter 
+ ```c#
+mockValidator.Verify(x => x.MethodA(It.IsNotNull<string>()));
+```
+*Checking the method A was called with a string value different to null*
+
+3. Behaviour Testing  - Checking if a method was never called with 
+ ```c#
+mockValidator.Verify(x => x.MethodA(It.IsAny<string>()), Times.Never);
+```
+*Checking the method A was not called*
+
+4. Behaviour Testing  - Checking how many times the method A it was called 
+ ```c#
+mockValidator.Verify(x => x.MethodA(It.IsNotNull<string>()), Times.Exactly(2));
+```
+
+5. Behaviour Testing  - Checking if a property was called 
+ ```c#
+mockValidator.VerifyGet(x => x.ServiceInformation.License.LicenseKey, Times.Once);
+```
+
+6. Behaviour Testing  - Checking if a property was set once (in this case with any value)
+ ```c#
+mockValidator.VerifySet(x => x.PropertyA = It.IsAny<ValidationMode>(), Times.Once);
+```

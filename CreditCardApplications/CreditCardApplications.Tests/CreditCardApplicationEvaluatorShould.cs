@@ -266,6 +266,102 @@ namespace CreditCardApplications.Tests
             Assert.Equal(ValidationMode.Detailed, mockValidator.Object.ValidationMode);
         }
 
+        [Fact]
+        public void ValidateFrequentFlyerNumberForLowIncomeApplications()
+        {
+            //Arrange
+            var mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { FrequentFlyerNumber = "q" };
+
+            //Act
+            sut.Evaluate(application);
+
+            /*
+             * TODO: Behaviour Testing  - Checking if a method was called
+             * 
+             * Checking if the method isValid() is called with the parameter "z" | "q" | any string different to null
+             */
+            //Assert
+            //mockValidator.Verify(x => x.IsValid("z")); //Failure
+            //mockValidator.Verify(x => x.IsValid("q")); //Run OK
+            mockValidator.Verify(x => x.IsValid(It.IsNotNull<string>()),
+                "Frequent flyer number passed should not be null"); //overload with custom message
+
+            //TODO: Checking if IsValid() method it was called twice
+            //mockValidator.Verify(x => x.IsValid(It.IsNotNull<string>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public void NotValidateFrequentFlyerNumberForHighIncomeApplications()
+        {
+            //Arrange
+            var mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { GrossAnnualIncome = 100_000 };
+
+            //act
+            sut.Evaluate(application);
+
+            /*
+             * TODO: Behaviour Testing  - Checking if a method was never called
+             */
+            //assert
+            mockValidator.Verify(x => x.IsValid(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public void CheckLicenseKeyForLowIncomeApplications()
+        {
+            //arrange
+            var mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { GrossAnnualIncome = 99_000 };
+
+            //act
+            sut.Evaluate(application);
+
+            //assert
+            /*
+             * TODO: Behaviour Testing  - Checking if a property was called
+             */
+            mockValidator.VerifyGet(x => x.ServiceInformation.License.LicenseKey, Times.Once);
+        }
+
+        [Fact]
+        public void SetDetailedLookupForOlderApplications()
+        {
+            //arrange
+            var mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { Age = 30 };
+
+            //act
+            sut.Evaluate(application);
+
+            /*
+             * TODO: Behaviour Testing  - Checking if a property was set
+             */
+            //assert
+            //mockValidator.VerifySet(x => x.ValidationMode = ValidationMode.Detailed);
+            //mockValidator.VerifySet(x => x.ValidationMode = ValidationMode.Detailed, Times.Once);
+            mockValidator.VerifySet(x => x.ValidationMode = It.IsAny<ValidationMode>(), Times.Once);
+        }
+
 
     }
 }
