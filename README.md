@@ -89,3 +89,26 @@ mockValidator.VerifyGet(x => x.ServiceInformation.License.LicenseKey, Times.Once
  ```c#
 mockValidator.VerifySet(x => x.PropertyA = It.IsAny<ValidationMode>(), Times.Once);
 ```
+
+### Other techniques to test mock objects
+
+1. Throwing exception from Mock objects
+ ```c#
+ mockValidator.Setup(x => x.MethodA(It.IsAny<string>()))
+              .Throws(new Exception("Custom message"));
+//if the method MethodA() is called with any string, then the mock object will throw an exception
+```
+
+2. Raising events from Mock objects
+ ```c#
+mockValidator.Raise(x => x.ValidatorLookupPerformed += null, EventArgs.Empty);
+```
+
+3. Returning different results for sequence calls
+ ```c#
+mockValidator.SetupSequence(x => x.MethodA(It.IsAny<string>()))
+             .Returns(false)
+             .Returns(true);
+```
+
+4.Mocking members of a concrete class - Protected  & virtual methods

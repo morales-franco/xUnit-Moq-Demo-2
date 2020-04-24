@@ -9,15 +9,32 @@ namespace CreditCardApplications
         private const int LowIncomeThreshhold = 20_000;
 
         private readonly IFrequentFlyerNumberValidator _validator;
+        private readonly FraudLookup _fraudLookup;
 
-        public CreditCardApplicationEvaluator(IFrequentFlyerNumberValidator validator)
+        public int ValidatorLookupCount { get; private set; }
+
+        public CreditCardApplicationEvaluator(IFrequentFlyerNumberValidator validator,
+            FraudLookup fraudLookup = null)
         {
             _validator = validator??
                 throw new ArgumentNullException(nameof(validator));
+
+            _validator.ValidatorLookupPerformed += ValidatorLookupPerformed;
+            _fraudLookup = fraudLookup;
+        }
+
+        private void ValidatorLookupPerformed(object sender, EventArgs e)
+        {
+            ValidatorLookupCount++;
         }
 
         public CreditCardApplicationDecision Evaluate(CreditCardApplication application)
         {
+            if (_fraudLookup != null && _fraudLookup.IsFraudRisk(application))
+            {
+                return CreditCardApplicationDecision.ReferredToHumanFraudRisk;
+            }
+
             if (application.GrossAnnualIncome >= HighIncomeThreshhold)
             {
                 return CreditCardApplicationDecision.AutoAccepted;
@@ -31,7 +48,19 @@ namespace CreditCardApplications
             _validator.ValidationMode = application.Age >= 30 ? ValidationMode.Detailed :
                                                                 ValidationMode.Quick;
 
-            var isValidFrequentFlyerNumber = _validator.IsValid(application.FrequentFlyerNumber);
+            bool isValidFrequentFlyerNumber;
+
+            try
+            {
+                isValidFrequentFlyerNumber = 
+                    _validator.IsValid(application.FrequentFlyerNumber);
+            }
+            catch (Exception)
+            {
+                //log
+                return CreditCardApplicationDecision.ReferredToHuman;
+            }
+
 
             if (!isValidFrequentFlyerNumber)
             {

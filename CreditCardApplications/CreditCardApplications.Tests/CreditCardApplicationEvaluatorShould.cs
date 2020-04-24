@@ -1,6 +1,7 @@
 using System;
 using Xunit;
 using Moq;
+using Moq.Protected;
 
 namespace CreditCardApplications.Tests
 {
@@ -360,6 +361,111 @@ namespace CreditCardApplications.Tests
             //mockValidator.VerifySet(x => x.ValidationMode = ValidationMode.Detailed);
             //mockValidator.VerifySet(x => x.ValidationMode = ValidationMode.Detailed, Times.Once);
             mockValidator.VerifySet(x => x.ValidationMode = It.IsAny<ValidationMode>(), Times.Once);
+        }
+
+        [Fact]
+        public void ReferWhenFrequentFlyerValidationError()
+        {
+            Mock<IFrequentFlyerNumberValidator> mockValidator
+                = new Mock<IFrequentFlyerNumberValidator>();
+
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
+
+            /*
+             * TODO: throwing exception from Mock objects
+             * if the method isValid() is called with any string, then the mock object will throw an exception
+             */
+            mockValidator.Setup(x => x.IsValid(It.IsAny<string>()))
+                         .Throws(new Exception("Custom message"));
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { Age = 42 };
+
+            CreditCardApplicationDecision decision = sut.Evaluate(application);
+
+            Assert.Equal(CreditCardApplicationDecision.ReferredToHuman, decision);
+        }
+
+        [Fact]
+        public void IncrementLookupCount()
+        {
+            Mock<IFrequentFlyerNumberValidator> mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
+
+            /*
+             * TODO: Mock object raises events
+             */
+            mockValidator.Setup(x => x.IsValid(It.IsAny<string>()))
+                         .Returns(true)
+                         .Raises(x => x.ValidatorLookupPerformed += null, EventArgs.Empty);
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { FrequentFlyerNumber = "x", Age = 25 };
+
+            sut.Evaluate(application);
+
+            //mockValidator.Raise(x => x.ValidatorLookupPerformed += null, EventArgs.Empty);
+
+            Assert.Equal(1, sut.ValidatorLookupCount);
+        }
+
+        [Fact]
+        public void ReferInvalidFrequentFlyerApplications_Sequence()
+        {
+            //arrange
+            Mock<IFrequentFlyerNumberValidator> mockValidator = new Mock<IFrequentFlyerNumberValidator>();
+            mockValidator.Setup(x => x.ServiceInformation.License.LicenseKey).Returns("OK");
+
+            /*
+            * TODO: Returning different results for sequence calls
+            */
+            mockValidator.SetupSequence(x => x.IsValid(It.IsAny<string>()))
+                         .Returns(false)
+                         .Returns(true);
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object);
+
+            var application = new CreditCardApplication { Age = 25 };
+
+            //act | assert
+            CreditCardApplicationDecision firstDecision = sut.Evaluate(application);
+            Assert.Equal(CreditCardApplicationDecision.ReferredToHuman, firstDecision);
+
+            //act | assert
+            CreditCardApplicationDecision secondDecision = sut.Evaluate(application);
+            Assert.Equal(CreditCardApplicationDecision.AutoDeclined, secondDecision);
+        }
+
+        [Fact]
+        public void ReferFraudRisk()
+        {
+            Mock<IFrequentFlyerNumberValidator> mockValidator =
+                new Mock<IFrequentFlyerNumberValidator>();
+
+            /*
+             * TODO: Mocking members of a concrete class
+             * Protected method & virtual methods
+             */
+
+            Mock<FraudLookup> mockFraudLookup = new Mock<FraudLookup>();
+            //mockFraudLookup.Setup(x => x.IsFraudRisk(It.IsAny<CreditCardApplication>()))
+            //               .Returns(true);
+
+
+            mockFraudLookup.Protected()
+                           .Setup<bool>("CheckApplication", ItExpr.IsAny<CreditCardApplication>())
+                           .Returns(true);
+
+            var sut = new CreditCardApplicationEvaluator(mockValidator.Object,
+                                                         mockFraudLookup.Object);
+
+            var application = new CreditCardApplication();
+
+            CreditCardApplicationDecision decision = sut.Evaluate(application);
+
+            Assert.Equal(CreditCardApplicationDecision.ReferredToHumanFraudRisk, decision);
         }
 
 
