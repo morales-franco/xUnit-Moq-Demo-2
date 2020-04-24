@@ -66,14 +66,14 @@ mockValidator.SetupProperty(x => x.PropertyToTrack);
 2. Behaviour Testing  - Checking if a method was called with a specified or any parameter 
  ```c#
 mockValidator.Verify(x => x.MethodA(It.IsNotNull<string>()));
+//Checking the method A was called with a string value different to null
 ```
-*Checking the method A was called with a string value different to null*
 
 3. Behaviour Testing  - Checking if a method was never called with 
  ```c#
 mockValidator.Verify(x => x.MethodA(It.IsAny<string>()), Times.Never);
+//Checking the method A was not called
 ```
-*Checking the method A was not called*
 
 4. Behaviour Testing  - Checking how many times the method A it was called 
  ```c#
